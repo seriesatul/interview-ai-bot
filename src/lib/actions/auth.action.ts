@@ -3,8 +3,8 @@
 import { auth, db } from "@/firebase/admin";
 import { getAuth } from "firebase-admin/auth";
 import { cookies} from "next/headers";
-import { success } from "zod";
 import { collection, DocumentReference } from "firebase/firestore";
+import { CollectionReference, DocumentData, Query } from "firebase-admin/firestore";
 
 
 const ONE_WEEK = 60 * 60 * 24 * 7;
@@ -126,4 +126,68 @@ export async function isAuthenticated() {
 
     return !!user;
     
+}
+
+interface Interview {
+    id: string;
+    userId: string;
+    createdAt: any;
+    role: string;
+    level: string;
+    questions: any[];
+    techstack: string[];
+    // Add other fields as needed
+    [key: string]: any;
+}
+
+interface User {
+    id: string;
+    name: string;
+    email: string;
+    // Add other fields as needed
+    [key: string]: any;
+}
+
+interface SignUpParams {
+    uid: string;
+    name: string;
+    email: string;
+}
+
+interface SignInParams {
+    email: string;
+    idToken: string;
+}
+
+export async function getInterviewByUserId(userId:string):Promise<Interview[] | null>{
+    const interviews: FirebaseFirestore.QuerySnapshot<FirebaseFirestore.DocumentData> = await db
+        .collection('interviews')
+        .where('userId', '==', userId)
+        .orderBy('createdAt', 'desc')
+        .get();
+
+    return interviews.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+    })) as Interview[];
+}
+
+export async function getLatestInterviews(params: GetLatestInterviewsParams):Promise<Interview[] | null>{
+
+    const {userId,limit=20} = params;
+
+
+    const interviews: FirebaseFirestore.QuerySnapshot<FirebaseFirestore.DocumentData> = await db
+        .collection('interviews')
+        .where('userId', '==', userId)
+        .where('finalized', '==', true)
+        .where('userId', '!=', userId)
+        .limit(limit)
+        .orderBy('createdAt', 'desc')
+        .get();
+
+    return interviews.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+    })) as Interview[];
 }
